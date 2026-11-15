@@ -617,7 +617,8 @@ export function makeContextView(
       return i >= 0 ? markers[i] : undefined
     }
 
-    const spansReserved = source.detailState !== 'legacy' && source.detailState !== 'failed' && data.spans === undefined
+    const spansReserved = source.detailState !== 'legacy' && source.detailState !== 'failed'
+      && (data.spans === undefined || data.spans.length === 0)
     const head = headlineOf(data, pressure, breakdown)
 
     let activeTurn: number | null = hoverTurn

@@ -157,7 +157,7 @@ export function makeStatsTiming(kit: ViewKit, Donut: (props: DonutProps) => Reac
           ? <TimingStrip spans={props.spans} hoverKey={hoverKey} onHoverKey={setHoverKey} locale={props.locale} />
           : props.reserve === true
             ? (
-              <div className="lc-tstrip" aria-hidden="true">
+              <div className="lc-tstrip lc-tstrip-reserve" aria-hidden="true">
                 <div className="lc-tstrip-wrap"><div className="lc-tstrip-bar" /></div>
                 <div className="lc-tstrip-axis" />
               </div>
