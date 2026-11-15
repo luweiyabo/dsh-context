@@ -176,6 +176,28 @@ describe('DetailStore over the facts protocol', () => {
     store.release()
   })
 
+  test('a core refresh keeps the landed collections until their replacement arrives', async () => {
+    let rev = 1
+    const store = storeOf(
+      async () => core(rev),
+      async (part) => (part === 'events'
+        ? { rev, parts: { events: [{ seq: rev, time: T0, kind: 'inject', form: 'context' }] } }
+        : { rev, parts: {} }),
+    )
+    store.subscribe(() => {})
+    store.request(1)
+    await until(() => store.hasPayload, 'the core never landed')
+    store.ensurePart('events')
+    await until(() => store.getSnapshot().detail?.events.length === 1, 'the events part never landed')
+
+    rev = 2
+    store.request(2)
+    await until(() => store.getSnapshot().detail?.rev === 2, 'the newer core never landed')
+    assert.equal(store.getSnapshot().detail?.events.length, 1, 'the landed rows survive the core pass')
+    await until(() => store.getSnapshot().detail?.events[0]?.seq === 2, 'the replacement part never landed')
+    store.release()
+  })
+
   test('every window field participates in the replay decision', async () => {
     const windows: unknown[] = []
     const store = storeOf(async () => core(1), async (part, window) => {

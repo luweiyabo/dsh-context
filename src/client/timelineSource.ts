@@ -262,16 +262,8 @@ const PART_RETRY_MS = 1_000
 
 const PART_RETRY_LIMIT = 3
 
-function emptyDetail(rev: number, head?: ContextTimeline, requests?: RequestRecord[]): ContextTimelineDetail {
-  return {
-    rev,
-    ...(head === undefined ? {} : { head }),
-    requests: requests ?? [],
-    events: [],
-    nodes: [],
-    droppedNodes: 0,
-    archive: [],
-  }
+function emptyDetail(rev: number): ContextTimelineDetail {
+  return { rev, requests: [], events: [], nodes: [], droppedNodes: 0, archive: [] }
 }
 
 function seriesHasBreakdown(series: readonly RequestRecord[]): boolean {
@@ -283,9 +275,13 @@ function sameWindow(a: FactWindow, b: FactWindow): boolean {
     && a.filesTail === b.filesTail && a.commandsTail === b.commandsTail && a.spansTail === b.spansTail
 }
 
-function detailFromFacts(facts: FactsRead): ContextTimelineDetail {
-  const base = emptyDetail(facts.rev, facts.parts.head, facts.parts.series ?? facts.parts.requests)
-  return mergeFactsInto(base, facts)
+function detailFromFacts(facts: FactsRead, prev: ContextTimelineDetail | null): ContextTimelineDetail {
+  return mergeFactsInto({
+    ...(prev ?? emptyDetail(facts.rev)),
+    rev: facts.rev,
+    ...(facts.parts.head === undefined ? {} : { head: facts.parts.head }),
+    ...(facts.parts.series === undefined ? {} : { requests: facts.parts.series }),
+  }, facts)
 }
 
 function mergeFactsInto(detail: ContextTimelineDetail, facts: FactsRead): ContextTimelineDetail {
@@ -559,7 +555,7 @@ export class DetailStore {
         if ('missing' in read && read.missing?.includes('series') === true) {
           return { detail: await this.legacyRead(), disable: true }
         }
-        return { detail: detailFromFacts(read), disable: false }
+        return { detail: detailFromFacts(read, this.detail), disable: false }
       }
     }
     return { detail: await this.legacyRead(), disable: false }
@@ -656,6 +652,7 @@ export class DetailStore {
           this.onResize?.()
           this.unavailableParts.clear()
           this.partRev.clear()
+          this.clearPartRetries()
           if (!seriesHasBreakdown(d.requests)) this.ensurePart('requests')
           this.fetchWantedParts()
         }
